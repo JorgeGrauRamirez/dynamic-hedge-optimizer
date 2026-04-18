@@ -9,7 +9,7 @@ The app benchmarks three LP-based risk measures (CVaR, MAD, Minimax)
 against three standard benchmarks (Unhedged, Naive 1:1, MVHR) across
 hundreds of backtested voyages.
 
-Live demo (once deployed): `[https://dynamic-hedge-optimizer-jg9.streamlit.app])`
+Live demo (once deployed): `https://dynamic-hedge-optimizer-jg9.streamlit.app`
 
 ---
 
