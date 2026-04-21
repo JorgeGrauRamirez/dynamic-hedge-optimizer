@@ -320,11 +320,12 @@ def plot_hedge_allocations(
         hr_cols = [f"{prefix}{c}" for c in ffa_cols if f"{prefix}{c}" in df_res.columns]
         if hr_cols:
             avg_hr = df_res[hr_cols].sum(axis=1).mean()
+            xsuffix = "" if col_idx == 1 else str(col_idx)
             fig.add_annotation(
                 text=f"avg HR = {avg_hr:.2f}",
                 x=0.5, y=1.06,
-                xref=f"x{col_idx} domain",
-                yref=f"y{col_idx} domain",
+                xref=f"x{xsuffix} domain",
+                yref=f"y{xsuffix} domain",
                 showarrow=False,
                 font={"size": 10, "color": "#6b7280"},
                 xanchor="center",
