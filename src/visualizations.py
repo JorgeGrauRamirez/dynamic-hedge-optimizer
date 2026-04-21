@@ -47,17 +47,19 @@ _LINE_COLOR = "rgba(255,255,255,0.15)"
 
 def _apply_grid(fig: go.Figure, rows: int = 1, cols: int = 1) -> None:
     """Apply a subtle grid that works on dark backgrounds."""
+    use_rowcol = rows > 1 or cols > 1
     for r in range(1, rows + 1):
         for c in range(1, cols + 1):
+            kw = {"row": r, "col": c} if use_rowcol else {}
             fig.update_xaxes(
                 showgrid=True, gridcolor=_GRID_COLOR, gridwidth=1,
                 zeroline=False, showline=True, linecolor=_LINE_COLOR,
-                row=r, col=c,
+                **kw,
             )
             fig.update_yaxes(
                 showgrid=True, gridcolor=_GRID_COLOR, gridwidth=1,
                 zeroline=False, showline=True, linecolor=_LINE_COLOR,
-                row=r, col=c,
+                **kw,
             )
 
 
