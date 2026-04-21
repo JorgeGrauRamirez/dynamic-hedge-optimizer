@@ -508,11 +508,11 @@ with tab_overview:
     )
     st.plotly_chart(
         plot_eda(df, physical_cols, ffa_cols_all),
-        use_container_width=True,
+        width='stretch',
     )
 
     with st.expander("📋 Raw data preview (last 50 rows)"):
-        st.dataframe(df.tail(50), use_container_width=True, height=350)
+        st.dataframe(df.tail(50), width='stretch', height=350)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -660,7 +660,7 @@ with tab_backtest:
         summary = build_summary_table(df_results)
         st.dataframe(
             summary.style.format("{:,.2f}"),
-            use_container_width=True,
+            width='stretch',
         )
         st.download_button(
             "⬇️  Download summary table (CSV)",
@@ -687,7 +687,7 @@ with tab_backtest:
         )
         st.plotly_chart(
             plot_pnl_distribution(df_results, cfg_used["target_physical_route"]),
-            use_container_width=True,
+            width='stretch',
         )
 
         # Cumulative P&L
@@ -707,7 +707,7 @@ with tab_backtest:
         )
         st.plotly_chart(
             plot_cumulative_pnl(df_results, cfg_used["target_physical_route"]),
-            use_container_width=True,
+            width='stretch',
         )
 
         # Risk/Return bar chart
@@ -725,7 +725,7 @@ with tab_backtest:
             """,
             unsafe_allow_html=True,
         )
-        st.plotly_chart(plot_risk_summary(df_results), use_container_width=True)
+        st.plotly_chart(plot_risk_summary(df_results), width='stretch')
 
     else:
         st.markdown('<p class="section-header">No results yet</p>', unsafe_allow_html=True)
@@ -770,7 +770,7 @@ with tab_deepdive:
             """,
             unsafe_allow_html=True,
         )
-        st.plotly_chart(plot_advanced_vs_time(df_results), use_container_width=True)
+        st.plotly_chart(plot_advanced_vs_time(df_results), width='stretch')
 
         # Hedge allocations
         st.markdown('<p class="section-header">Dynamic Hedge Allocation by Risk Measure</p>', unsafe_allow_html=True)
@@ -789,7 +789,7 @@ with tab_deepdive:
         )
         st.plotly_chart(
             plot_hedge_allocations(df_results, cfg_used["ffa_columns"]),
-            use_container_width=True,
+            width='stretch',
         )
 
         # Per-voyage table
@@ -807,7 +807,7 @@ with tab_deepdive:
                 "HR_MAD": "{:.2f}",
                 "HR_Minimax": "{:.2f}",
             }),
-            use_container_width=True,
+            width='stretch',
             height=420,
         )
         st.download_button(

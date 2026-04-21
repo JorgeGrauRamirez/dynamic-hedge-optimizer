@@ -139,7 +139,7 @@ def run_backtest(
         hmm_lookback = min(250, t0_idx)
         df_hmm = df_working.iloc[t0_idx - hmm_lookback : t0_idx + 1]
         anchor_rets_hmm = (
-            np.log(df_hmm[anchor] / df_hmm[anchor].shift(1)).dropna()
+            np.log(df_hmm[anchor] / df_hmm[anchor].shift(1)).dropna().reset_index(drop=True)
         )
         prob_crisis = _fit_markov_regime(anchor_rets_hmm)
 
