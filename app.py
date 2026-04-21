@@ -46,28 +46,23 @@ st.set_page_config(
 st.markdown(
     """
     <style>
-        /* ── Global ── */
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-        html, body, [class*="css"] { font-family: 'Inter', sans-serif; }
-
         .block-container {
             padding-top: 1.5rem;
             padding-bottom: 2rem;
             max-width: 1400px;
         }
 
-        /* ── Hero banner ── */
+        /* ── Hero banner — always dark, explicit colours ── */
         .hero-banner {
             background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%);
             border-radius: 16px;
             padding: 2.2rem 2.5rem;
             margin-bottom: 1.5rem;
             color: #ffffff;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.40);
         }
         .hero-banner h1 {
-            margin: 0 0 0.3rem 0;
+            margin: 0 0 0.4rem 0;
             font-size: 2rem;
             font-weight: 700;
             color: #ffffff !important;
@@ -77,77 +72,75 @@ st.markdown(
             font-size: 0.92rem;
             color: #a8c8e8;
             margin: 0;
-            line-height: 1.5;
+            line-height: 1.6;
         }
         .hero-banner .badge {
             display: inline-block;
-            background: rgba(255,255,255,0.12);
-            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.25);
             border-radius: 20px;
             padding: 0.2rem 0.75rem;
             font-size: 0.75rem;
             margin-right: 0.4rem;
-            margin-top: 0.6rem;
+            margin-top: 0.7rem;
             color: #cde8ff;
         }
 
-        /* ── Section headers ── */
+        /* ── Section headers — inherit colour so they work in dark & light ── */
         .section-header {
             font-size: 1.05rem;
             font-weight: 600;
-            color: #1f3b57;
-            border-left: 4px solid #2c5364;
+            border-left: 4px solid #4a9eca;
             padding-left: 0.75rem;
             margin: 1.4rem 0 0.8rem 0;
+            color: inherit;
         }
 
-        /* ── Metric cards ── */
-        [data-testid="stMetricValue"] {
-            font-size: 1.5rem;
-            font-weight: 600;
-            color: #1f3b57;
-        }
+        /* ── Metric labels ── */
         [data-testid="stMetricLabel"] {
             font-size: 0.78rem;
             font-weight: 500;
-            color: #6b7280;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
+        [data-testid="stMetricValue"] {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
 
-        /* ── Info / method boxes ── */
+        /* ── Info boxes — semi-transparent so they blend with any theme ── */
         .method-box {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
+            background: rgba(59, 130, 246, 0.08);
+            border: 1px solid rgba(59, 130, 246, 0.25);
             border-left: 4px solid #3b82f6;
             border-radius: 8px;
             padding: 1rem 1.25rem;
             margin-bottom: 0.8rem;
             font-size: 0.875rem;
-            color: #374151;
             line-height: 1.65;
+            color: inherit;
         }
-        .method-box strong { color: #1e3a5f; }
+        .method-box strong { color: #60a5fa; }
         .method-box code {
-            background: #e0e7ef;
+            background: rgba(96, 165, 250, 0.15);
             border-radius: 3px;
             padding: 0.1rem 0.35rem;
             font-size: 0.82rem;
-            color: #1e3a5f;
+            color: #93c5fd;
         }
 
         .insight-box {
-            background: linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%);
-            border: 1px solid #bfdbfe;
+            background: rgba(16, 185, 129, 0.07);
+            border: 1px solid rgba(16, 185, 129, 0.25);
             border-radius: 10px;
             padding: 1rem 1.25rem;
             margin: 0.6rem 0;
             font-size: 0.875rem;
-            color: #374151;
+            color: inherit;
         }
         .insight-box .label {
             font-weight: 600;
-            color: #1e40af;
+            color: #34d399;
             font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -157,8 +150,9 @@ st.markdown(
         /* ── Tag pills ── */
         .tag {
             display: inline-block;
-            background: #dbeafe;
-            color: #1e40af;
+            background: rgba(96, 165, 250, 0.18);
+            color: #93c5fd;
+            border: 1px solid rgba(96, 165, 250, 0.30);
             border-radius: 12px;
             padding: 0.15rem 0.6rem;
             font-size: 0.75rem;
@@ -166,27 +160,51 @@ st.markdown(
             margin: 0.1rem 0.15rem;
         }
 
-        /* ── Tab content ── */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 4px;
-            background: #f1f5f9;
-            padding: 6px;
-            border-radius: 12px;
+        /* ── Sidebar section cards ── */
+        .sidebar-section {
+            border-radius: 10px;
+            border: 1px solid rgba(74, 158, 202, 0.25);
+            padding: 0.85rem 0.9rem 0.6rem 0.9rem;
+            margin-bottom: 0.75rem;
+            background: rgba(74, 158, 202, 0.05);
         }
-        .stTabs [data-baseweb="tab"] {
-            border-radius: 8px;
-            font-weight: 500;
-            font-size: 0.875rem;
+        .sidebar-section-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #4a9eca;
+            margin-bottom: 0.55rem;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
         }
 
-        /* ── Sidebar ── */
-        [data-testid="stSidebar"] {
-            background: #f8fafc;
+        /* ── Run status banner ── */
+        .run-status {
+            background: rgba(234, 179, 8, 0.12);
+            border: 1px solid rgba(234, 179, 8, 0.35);
+            border-radius: 8px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.8rem;
+            color: #fbbf24;
+            margin-top: 0.5rem;
+            text-align: center;
+            animation: pulse 1.5s ease-in-out infinite;
         }
-        [data-testid="stSidebar"] h1,
-        [data-testid="stSidebar"] h2,
-        [data-testid="stSidebar"] h3 {
-            color: #1f3b57 !important;
+        .run-done {
+            background: rgba(16, 185, 129, 0.12);
+            border: 1px solid rgba(16, 185, 129, 0.35);
+            border-radius: 8px;
+            padding: 0.6rem 0.85rem;
+            font-size: 0.8rem;
+            color: #34d399;
+            margin-top: 0.5rem;
+            text-align: center;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0.55; }
         }
 
         /* ── Divider ── */
@@ -241,8 +259,13 @@ def _cached_load(path: str) -> pd.DataFrame:
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("### ⚙️ Configuration")
-    st.markdown("---")
-    st.markdown("**1. Data**")
+
+    # ── Section 1: Data ──────────────────────────────────────────────────
+    st.markdown(
+        '<div class="sidebar-section">'
+        '<div class="sidebar-section-title">📂 &nbsp;1 · Data</div>',
+        unsafe_allow_html=True,
+    )
     uploaded = st.file_uploader(
         "Upload custom dataset (optional)",
         type=["csv"],
@@ -252,6 +275,7 @@ with st.sidebar:
             "scaled to USD thousands/day."
         ),
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
 if uploaded is not None:
     df = load_data(uploaded)
@@ -274,7 +298,13 @@ recommended_ffa = get_recommended_ffa_universe(df)
 # Sidebar — parameters
 # ---------------------------------------------------------------------------
 with st.sidebar:
-    st.markdown("**2. Route & Instruments**")
+
+    # ── Section 2: Route & Instruments ──────────────────────────────────
+    st.markdown(
+        '<div class="sidebar-section">'
+        '<div class="sidebar-section-title">🗺️ &nbsp;2 · Route & Instruments</div>',
+        unsafe_allow_html=True,
+    )
     target_physical_route = st.selectbox(
         "Physical route (exposure)",
         options=physical_cols,
@@ -305,9 +335,14 @@ with st.sidebar:
     )
     if anchor_index_col not in ffa_columns:
         ffa_columns = [anchor_index_col] + [c for c in ffa_columns if c != anchor_index_col]
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("**3. Voyage & Backtest**")
+    # ── Section 3: Voyage & Backtest ────────────────────────────────────
+    st.markdown(
+        '<div class="sidebar-section">'
+        '<div class="sidebar-section-title">🚢 &nbsp;3 · Voyage & Backtest</div>',
+        unsafe_allow_html=True,
+    )
     voyage_weeks = st.slider("Voyage length (weeks)", 1, 12, 5)
     n_backtests = st.slider("Number of voyages to backtest", 20, 300, 150, step=10)
     non_overlapping = st.checkbox(
@@ -323,9 +358,14 @@ with st.sidebar:
         step=5.0,
         help="Scales P&L from $/day to absolute $ per voyage.",
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("**4. Calibration & Regime**")
+    # ── Section 4: Calibration & Regime ─────────────────────────────────
+    st.markdown(
+        '<div class="sidebar-section">'
+        '<div class="sidebar-section-title">📡 &nbsp;4 · Calibration & Regime</div>',
+        unsafe_allow_html=True,
+    )
     calibration_weeks = st.slider(
         "Advanced-model calibration window (weeks)",
         4, 52, 8,
@@ -340,9 +380,14 @@ with st.sidebar:
             "with the historical matrix using the HMM crisis probability."
         ),
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    st.markdown("**5. Monte Carlo & Optimiser**")
+    # ── Section 5: Monte Carlo & Optimiser ──────────────────────────────
+    st.markdown(
+        '<div class="sidebar-section">'
+        '<div class="sidebar-section-title">🎲 &nbsp;5 · Monte Carlo & Optimiser</div>',
+        unsafe_allow_html=True,
+    )
     n_sims = st.select_slider(
         "Monte Carlo scenarios",
         options=[1_000, 2_500, 5_000, 7_500, 10_000, 15_000, 20_000],
@@ -357,9 +402,18 @@ with st.sidebar:
         help="Maximum weight on any single FFA instrument.",
     )
     random_seed = st.number_input("Random seed", value=42, step=1)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    st.markdown("---")
-    run_btn = st.button("▶ Run Backtest", type="primary", use_container_width=True)
+    # ── Run button + status ──────────────────────────────────────────────
+    run_btn = st.button("▶  Run Backtest", type="primary", use_container_width=True)
+    _sidebar_status = st.empty()   # placeholder for running / done feedback
+
+    if "df_results" in st.session_state and not run_btn:
+        n_done = len(st.session_state["df_results"])
+        _sidebar_status.markdown(
+            f'<div class="run-done">✓ Last run: {n_done} voyages complete</div>',
+            unsafe_allow_html=True,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -484,6 +538,10 @@ with tab_backtest:
                 hedge_upper_bound=hedge_upper_bound,
                 random_seed=int(random_seed),
             )
+            _sidebar_status.markdown(
+                '<div class="run-status">⏳ Running backtest…</div>',
+                unsafe_allow_html=True,
+            )
             progress = st.progress(0.0, text="Starting backtest…")
             cfg = BacktestConfig(**cfg_dict)
 
@@ -494,12 +552,21 @@ with tab_backtest:
                 df_results = run_backtest(df_working, cfg, progress_cb=_cb)
             except ValueError as e:
                 progress.empty()
+                _sidebar_status.markdown(
+                    '<div class="run-status">❌ Backtest failed — see error above</div>',
+                    unsafe_allow_html=True,
+                )
                 st.error(str(e))
                 st.stop()
 
             progress.empty()
             st.session_state["df_results"] = df_results
             st.session_state["cfg"] = cfg_dict
+            n_done = len(df_results)
+            _sidebar_status.markdown(
+                f'<div class="run-done">✓ Done — {n_done} voyages</div>',
+                unsafe_allow_html=True,
+            )
 
         df_results: pd.DataFrame = st.session_state["df_results"]
         cfg_used: dict = st.session_state["cfg"]

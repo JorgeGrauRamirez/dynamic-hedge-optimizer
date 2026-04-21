@@ -36,24 +36,27 @@ ALL_STRATEGY_COLS = ["Unhedged", "Naive_1to1", "MVHR", "CVaR", "MAD", "Minimax"]
 
 _LAYOUT_DEFAULTS = dict(
     paper_bgcolor="rgba(0,0,0,0)",
-    plot_bgcolor="#f8fafc",
-    font=dict(family="Inter, sans-serif", size=12, color="#374151"),
-    title_font=dict(size=14, color="#1f3b57", family="Inter, sans-serif"),
+    plot_bgcolor="rgba(0,0,0,0)",
+    font=dict(family="Inter, sans-serif", size=12),
+    title_font=dict(size=14, family="Inter, sans-serif"),
 )
+
+_GRID_COLOR = "rgba(255,255,255,0.08)"
+_LINE_COLOR = "rgba(255,255,255,0.15)"
 
 
 def _apply_grid(fig: go.Figure, rows: int = 1, cols: int = 1) -> None:
-    """Apply a clean, light grid style to all axes."""
+    """Apply a subtle grid that works on dark backgrounds."""
     for r in range(1, rows + 1):
         for c in range(1, cols + 1):
             fig.update_xaxes(
-                showgrid=True, gridcolor="#e5e7eb", gridwidth=1,
-                zeroline=False, showline=True, linecolor="#d1d5db",
+                showgrid=True, gridcolor=_GRID_COLOR, gridwidth=1,
+                zeroline=False, showline=True, linecolor=_LINE_COLOR,
                 row=r, col=c,
             )
             fig.update_yaxes(
-                showgrid=True, gridcolor="#e5e7eb", gridwidth=1,
-                zeroline=False, showline=True, linecolor="#d1d5db",
+                showgrid=True, gridcolor=_GRID_COLOR, gridwidth=1,
+                zeroline=False, showline=True, linecolor=_LINE_COLOR,
                 row=r, col=c,
             )
 
@@ -116,8 +119,8 @@ def plot_eda(
         **_LAYOUT_DEFAULTS,
         height=720,
         hovermode="x unified",
-        legend={"groupclick": "toggleitem", "bgcolor": "rgba(255,255,255,0.85)",
-                "bordercolor": "#e5e7eb", "borderwidth": 1},
+        legend={"groupclick": "toggleitem", "bgcolor": "rgba(30,30,30,0.85)",
+                "bordercolor": "rgba(255,255,255,0.15)", "borderwidth": 1},
         margin={"l": 50, "r": 30, "t": 70, "b": 40},
     )
     _apply_grid(fig, rows=2)
@@ -157,7 +160,7 @@ def plot_pnl_distribution(df_res: pd.DataFrame, route: str) -> go.Figure:
             y=s.min() - (s.max() - s.min()) * 0.08,
             text=f"μ=${mean_val:,.0f}<br>CVaR=${cvar_val:,.0f}",
             showarrow=False,
-            font={"size": 9, "color": "#6b7280"},
+            font={"size": 9, "color": "rgba(180,180,180,0.8)"},
             align="center",
         )
 
@@ -173,7 +176,7 @@ def plot_pnl_distribution(df_res: pd.DataFrame, route: str) -> go.Figure:
         showlegend=False,
         margin={"l": 50, "r": 20, "t": 70, "b": 60},
     )
-    fig.update_yaxes(tickprefix="$", tickformat=",.0f", showgrid=True, gridcolor="#e5e7eb")
+    fig.update_yaxes(tickprefix="$", tickformat=",.0f", showgrid=True, gridcolor=_GRID_COLOR)
     fig.update_xaxes(showgrid=False)
     return fig
 
@@ -208,7 +211,7 @@ def plot_cumulative_pnl(df_res: pd.DataFrame, route: str) -> go.Figure:
             font={"size": 9, "color": color},
         )
 
-    fig.add_hline(y=0, line_width=1.2, line_color="#6b7280", line_dash="dot", opacity=0.7)
+    fig.add_hline(y=0, line_width=1.2, line_color="rgba(180,180,180,0.5)", line_dash="dot", opacity=0.7)
 
     fig.update_layout(
         **_LAYOUT_DEFAULTS,
@@ -217,7 +220,7 @@ def plot_cumulative_pnl(df_res: pd.DataFrame, route: str) -> go.Figure:
         yaxis_title="Cumulative P&L (USD)",
         height=520,
         hovermode="x unified",
-        legend={"bgcolor": "rgba(255,255,255,0.85)", "bordercolor": "#e5e7eb", "borderwidth": 1},
+        legend={"bgcolor": "rgba(30,30,30,0.85)", "bordercolor": "rgba(255,255,255,0.15)", "borderwidth": 1},
         margin={"l": 50, "r": 140, "t": 70, "b": 40},
     )
     fig.update_yaxes(tickprefix="$", tickformat=",.0f")
@@ -262,7 +265,7 @@ def plot_advanced_vs_time(df_res: pd.DataFrame) -> go.Figure:
 
     # Annotate average P(crisis)
     avg_crisis = df_res["Prob_Crisis"].mean()
-    fig.add_hline(y=0, line_width=1, line_color="#6b7280", line_dash="dot", opacity=0.6)
+    fig.add_hline(y=0, line_width=1, line_color="rgba(180,180,180,0.5)", line_dash="dot", opacity=0.6)
 
     fig.update_layout(
         **_LAYOUT_DEFAULTS,
@@ -288,7 +291,7 @@ def plot_advanced_vs_time(df_res: pd.DataFrame) -> go.Figure:
         },
         height=540,
         hovermode="x unified",
-        legend={"bgcolor": "rgba(255,255,255,0.85)", "bordercolor": "#e5e7eb", "borderwidth": 1},
+        legend={"bgcolor": "rgba(30,30,30,0.85)", "bordercolor": "rgba(255,255,255,0.15)", "borderwidth": 1},
         margin={"l": 50, "r": 70, "t": 70, "b": 40},
     )
     return fig
@@ -347,7 +350,7 @@ def plot_hedge_allocations(
                 row=1, col=col_idx,
             )
         fig.add_hline(
-            y=1.0, line_dash="dash", line_color="#374151", opacity=0.5,
+            y=1.0, line_dash="dash", line_color="rgba(200,200,200,0.5)", opacity=0.5,
             annotation_text="1:1" if col_idx == 1 else "",
             annotation_position="right",
             row=1, col=col_idx,
@@ -362,7 +365,7 @@ def plot_hedge_allocations(
         gridcolor="#e5e7eb",
     )
     for c in [2, 3]:
-        fig.update_yaxes(showgrid=True, gridcolor="#e5e7eb", row=1, col=c)
+        fig.update_yaxes(showgrid=True, gridcolor=_GRID_COLOR, row=1, col=c)
 
     fig.update_layout(
         **_LAYOUT_DEFAULTS,
@@ -373,7 +376,7 @@ def plot_hedge_allocations(
             "orientation": "h",
             "yanchor": "bottom", "y": -0.30,
             "xanchor": "center", "x": 0.5,
-            "bgcolor": "rgba(255,255,255,0.85)",
+            "bgcolor": "rgba(30,30,30,0.85)",
             "bordercolor": "#e5e7eb",
             "borderwidth": 1,
         },
@@ -428,7 +431,7 @@ def plot_risk_summary(df_res: pd.DataFrame) -> go.Figure:
     _bar(std_vals,  best_std_idx,  2)
     _bar(mean_vals, best_mean_idx, 3)
 
-    fig.add_vline(x=0, line_width=1, line_color="#374151", opacity=0.5, row=1, col=3)
+    fig.add_vline(x=0, line_width=1, line_color="rgba(200,200,200,0.5)", opacity=0.5, row=1, col=3)
 
     fig.update_layout(
         **_LAYOUT_DEFAULTS,
@@ -437,7 +440,7 @@ def plot_risk_summary(df_res: pd.DataFrame) -> go.Figure:
     )
     for c in [1, 2, 3]:
         fig.update_xaxes(tickprefix="$", tickformat=",.0f", row=1, col=c,
-                         showgrid=True, gridcolor="#e5e7eb")
+                         showgrid=True, gridcolor=_GRID_COLOR)
         fig.update_yaxes(showgrid=False, row=1, col=c)
     return fig
 
