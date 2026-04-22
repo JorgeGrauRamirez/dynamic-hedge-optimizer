@@ -20,7 +20,8 @@ from src.data_loader import (
 )
 import plotly.graph_objects as go
 
-from src.backtesting import BacktestConfig, compute_live_hedge, run_backtest
+from src.backtesting import BacktestConfig, run_backtest
+from src.live_hedge import compute_live_hedge
 from src.optimizers import realized_cvar
 from src.visualizations import (
     ALL_STRATEGY_COLS,
@@ -866,6 +867,8 @@ with tab_live:
         if live.get("error"):
             st.error(live["error"])
         else:
+            if live.get("note"):
+                st.warning(live["note"])
             # ── Header info ──────────────────────────────────────────────
             regime_color = "#e74c3c" if live["prob_crisis"] >= 0.5 else "#2ecc71"
             st.markdown(
@@ -900,10 +903,7 @@ with tab_live:
                     "CVaR (LP)":    "{:.4f}",
                     "MAD (LP)":     "{:.4f}",
                     "Minimax (LP)": "{:.4f}",
-                }).background_gradient(
-                    subset=["CVaR (LP)", "MAD (LP)", "Minimax (LP)"],
-                    cmap="YlOrRd", vmin=0,
-                ),
+                }),
                 width='stretch',
                 height=min(400, 45 + 35 * len(ffa_cols_live)),
             )
