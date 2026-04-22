@@ -300,3 +300,153 @@ def run_backtest(
         .reset_index(drop=True)
     )
     return df_res
+
+
+def compute_live_hedge(
+    df_working: pd.DataFrame,
+    cfg: BacktestConfig,
+) -> dict:
+    """Calibrate on the most recent data and return recommended hedge weights.
+
+    Uses the same pipeline as the backtest (regime detection → OU/GBM
+    calibration → Monte Carlo → LP optimisers) but anchored at the last
+    available row of ``df_working``.
+
+    Returns a dict with keys:
+        as_of_date      : pd.Timestamp
+        prob_crisis     : float
+        regime_label    : str
+        ffa_columns     : list[str]
+        w_cvar          : np.ndarray
+        w_mad           : np.ndarray
+        w_minimax       : np.ndarray
+        mvhr_beta       : float
+        mvhr_ffa        : str
+        error           : str | None  (set if calibration fails)
+    """
+    np.random.seed(cfg.random_seed)
+
+    ffa_cols = list(cfg.ffa_columns)
+    target = cfg.target_physical_route
+    anchor = cfg.anchor_index_col
+    anchor_idx = ffa_cols.index(anchor)
+
+    n = len(df_working)
+    min_history = max(cfg.calibration_weeks, cfg.mvhr_calibration_weeks)
+    if n < min_history + 1:
+        return {"error": "Not enough history to calibrate the live hedge."}
+
+    t0_idx = n - 1  # most recent row
+
+    # --- B. Regime detection ---
+    hmm_lookback = min(250, t0_idx)
+    df_hmm = df_working.iloc[t0_idx - hmm_lookback : t0_idx + 1]
+    anchor_rets_hmm = (
+        np.log(df_hmm[anchor] / df_hmm[anchor].shift(1)).dropna().reset_index(drop=True)
+    )
+    prob_crisis = _fit_markov_regime(anchor_rets_hmm)
+    regime_label = "Crisis / High-Vol" if prob_crisis >= 0.5 else "Normal / Low-Vol"
+
+    # --- C. Calibration ---
+    df_train_adv = df_working.iloc[t0_idx - cfg.calibration_weeks : t0_idx + 1].copy()
+    df_train_mvhr = df_working.iloc[t0_idx - cfg.mvhr_calibration_weeks : t0_idx + 1].copy()
+
+    log_phys = np.log(df_train_adv[target])
+    log_anch = np.log(df_train_adv[anchor])
+    spread = log_phys - log_anch
+
+    y_s = spread.iloc[1:].values
+    x_s = spread.iloc[:-1].values
+    ols_spread = sm.OLS(y_s, sm.add_constant(x_s)).fit()
+    beta_s = ols_spread.params[1]
+    sigma_s = float(np.std(ols_spread.resid, ddof=2))
+
+    theta = -np.log(beta_s) if beta_s > 0 else np.nan
+    mu_ou = ols_spread.params[0] / (1 - beta_s) if beta_s < 1 else np.nan
+    sigma_ou = (
+        sigma_s * np.sqrt(-2 * np.log(beta_s) / (1 - beta_s ** 2))
+        if 0 < beta_s < 1 else np.nan
+    )
+
+    ffa_rets_adv = np.log(df_train_adv[ffa_cols] / df_train_adv[ffa_cols].shift(1)).dropna()
+    sigma_gbm = ffa_rets_adv.std()
+
+    corr_hist = ffa_rets_adv.corr().values
+    corr_stress = np.full((len(ffa_cols), len(ffa_cols)), cfg.stress_corr)
+    np.fill_diagonal(corr_stress, 1.0)
+    corr_matrix = (1 - prob_crisis) * corr_hist + prob_crisis * corr_stress
+
+    P0_f = df_train_adv[ffa_cols].iloc[-1].values
+    P0_s = spread.iloc[-1]
+    P0_p_spot = df_train_adv[target].iloc[-1]
+    as_of_date = df_train_adv["Date"].iloc[-1]
+
+    if (
+        P0_p_spot <= 0
+        or np.isnan(P0_p_spot)
+        or np.isnan(beta_s)
+        or not (0 < beta_s < 1)
+        or np.isnan(theta)
+        or np.isnan(sigma_ou)
+        or np.isnan(mu_ou)
+        or np.isnan(np.sum(corr_matrix))
+    ):
+        return {"error": "Calibration produced invalid parameters. Check data quality."}
+
+    corr_matrix = _nearest_psd(corr_matrix)
+    L_corr = np.linalg.cholesky(corr_matrix)
+
+    # --- D. Monte Carlo ---
+    steps = cfg.voyage_weeks * 7
+    dt = 1.0 / 7.0
+    Z_m = np.random.normal(0, 1, (steps, cfg.n_sims, len(ffa_cols)))
+    Z_s = np.random.normal(0, 1, (steps, cfg.n_sims))
+
+    log_f_t = np.tile(np.log(P0_f), (cfg.n_sims, 1))
+    s_t = np.full(cfg.n_sims, P0_s)
+    sg = sigma_gbm.values
+    for step in range(steps):
+        eps = Z_m[step].dot(L_corr.T)
+        log_f_t += -0.5 * sg ** 2 * dt + sg * np.sqrt(dt) * eps
+        s_t += theta * (mu_ou - s_t) * dt + sigma_ou * np.sqrt(dt) * Z_s[step]
+
+    S_f_sim = np.exp(log_f_t)
+    S_p_sim = S_f_sim[:, anchor_idx] * np.exp(s_t)
+
+    # --- E. Scenario P&Ls ---
+    M = len(ffa_cols)
+    N = cfg.n_sims
+    phys_pnl = (S_p_sim - P0_p_spot) * cfg.assumed_volume
+    hedge_pnl = (S_f_sim - P0_f) * cfg.assumed_volume
+
+    # --- F. Optimisers ---
+    w_cvar = optimise_cvar(phys_pnl, hedge_pnl, M, N, alpha=cfg.cvar_alpha, w_upper=cfg.hedge_upper_bound)
+    w_mad = optimise_mad(phys_pnl, hedge_pnl, M, N, w_upper=cfg.hedge_upper_bound)
+    w_minimax = optimise_minimax(phys_pnl, hedge_pnl, M, N, w_upper=cfg.hedge_upper_bound)
+
+    # --- G. MVHR ---
+    phys_changes = df_train_mvhr[target].diff().dropna()
+    best_beta, best_r2, best_idx = 0.0, -1.0, 0
+    for k, col in enumerate(ffa_cols):
+        ffa_changes = df_train_mvhr[col].diff().dropna()
+        aligned = pd.concat([phys_changes, ffa_changes], axis=1).dropna()
+        if len(aligned) < 3:
+            continue
+        mod = sm.OLS(aligned.iloc[:, 0].values, sm.add_constant(aligned.iloc[:, 1].values)).fit()
+        if mod.rsquared > best_r2:
+            best_r2 = mod.rsquared
+            best_beta = float(np.clip(mod.params[1], 0.0, 2.0))
+            best_idx = k
+
+    return {
+        "error": None,
+        "as_of_date": as_of_date,
+        "prob_crisis": prob_crisis,
+        "regime_label": regime_label,
+        "ffa_columns": ffa_cols,
+        "w_cvar": w_cvar,
+        "w_mad": w_mad,
+        "w_minimax": w_minimax,
+        "mvhr_beta": best_beta,
+        "mvhr_ffa": ffa_cols[best_idx],
+    }

@@ -18,7 +18,9 @@ from src.data_loader import (
     load_data,
     split_columns,
 )
-from src.backtesting import BacktestConfig, run_backtest
+import plotly.graph_objects as go
+
+from src.backtesting import BacktestConfig, compute_live_hedge, run_backtest
 from src.optimizers import realized_cvar
 from src.visualizations import (
     ALL_STRATEGY_COLS,
@@ -429,8 +431,8 @@ df_working = build_working_dataset(df, target_physical_route, ffa_columns)
 # ---------------------------------------------------------------------------
 # Tabs
 # ---------------------------------------------------------------------------
-tab_overview, tab_backtest, tab_deepdive, tab_methodology = st.tabs(
-    ["📊  Overview", "🎯  Backtest Results", "🔬  Deep Dive", "📚  Methodology"]
+tab_overview, tab_backtest, tab_deepdive, tab_live, tab_methodology = st.tabs(
+    ["📊  Overview", "🎯  Backtest Results", "🔬  Deep Dive", "🧭  Live Hedge", "📚  Methodology"]
 )
 
 
@@ -822,7 +824,139 @@ with tab_deepdive:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# TAB 4 — METHODOLOGY
+# TAB 4 — LIVE HEDGE
+# ═══════════════════════════════════════════════════════════════════════════
+with tab_live:
+
+    st.markdown('<p class="section-header">Live Hedge Recommendation</p>', unsafe_allow_html=True)
+    st.markdown(
+        """
+        <div class="method-box">
+            Calibrates the full model pipeline on the <strong>most recent available data</strong>
+            and returns the recommended hedge weights for your next voyage.
+            The same regime detection → OU/GBM calibration → Monte Carlo → LP optimisation
+            used in the backtest is applied here, anchored at the last row of the dataset.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+    if st.button("⚡  Compute Live Hedge", type="primary"):
+        cfg_live = BacktestConfig(
+            target_physical_route=target_physical_route,
+            anchor_index_col=anchor_index_col,
+            ffa_columns=ffa_columns,
+            voyage_weeks=voyage_weeks,
+            assumed_volume=assumed_volume,
+            stress_corr=stress_corr,
+            mvhr_calibration_weeks=mvhr_calibration_weeks,
+            calibration_weeks=calibration_weeks,
+            n_sims=int(n_sims),
+            cvar_alpha=cvar_alpha,
+            hedge_upper_bound=hedge_upper_bound,
+            random_seed=int(random_seed),
+        )
+        with st.spinner("Calibrating model on latest data…"):
+            live = compute_live_hedge(df_working, cfg_live)
+        st.session_state["live_hedge"] = live
+
+    if "live_hedge" in st.session_state:
+        live = st.session_state["live_hedge"]
+
+        if live.get("error"):
+            st.error(live["error"])
+        else:
+            # ── Header info ──────────────────────────────────────────────
+            regime_color = "#e74c3c" if live["prob_crisis"] >= 0.5 else "#2ecc71"
+            st.markdown(
+                f"""
+                <div class="method-box">
+                    <strong>As of date:</strong> {live["as_of_date"].strftime("%d %b %Y")}&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <strong>Route:</strong> <code>{target_physical_route}</code>&nbsp;&nbsp;|&nbsp;&nbsp;
+                    <strong>Regime:</strong>
+                    <span style="color:{regime_color};font-weight:600">{live["regime_label"]}</span>
+                    &nbsp;(P<sub>crisis</sub> = {live["prob_crisis"]:.1%})
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            ffa_cols_live = live["ffa_columns"]
+            w_cvar    = live["w_cvar"]
+            w_mad     = live["w_mad"]
+            w_minimax = live["w_minimax"]
+
+            # ── Weights table ────────────────────────────────────────────
+            st.markdown('<p class="section-header">Recommended Weights by Instrument</p>', unsafe_allow_html=True)
+
+            df_weights = pd.DataFrame({
+                "FFA Instrument": ffa_cols_live,
+                "CVaR (LP)":    np.round(w_cvar, 4),
+                "MAD (LP)":     np.round(w_mad, 4),
+                "Minimax (LP)": np.round(w_minimax, 4),
+            })
+            st.dataframe(
+                df_weights.style.format({
+                    "CVaR (LP)":    "{:.4f}",
+                    "MAD (LP)":     "{:.4f}",
+                    "Minimax (LP)": "{:.4f}",
+                }).background_gradient(
+                    subset=["CVaR (LP)", "MAD (LP)", "Minimax (LP)"],
+                    cmap="YlOrRd", vmin=0,
+                ),
+                width='stretch',
+                height=min(400, 45 + 35 * len(ffa_cols_live)),
+            )
+
+            # ── Summary metrics ──────────────────────────────────────────
+            st.markdown('<p class="section-header">Aggregate Hedge Ratios</p>', unsafe_allow_html=True)
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Total HR — CVaR",    f"{w_cvar.sum():.3f}")
+            c2.metric("Total HR — MAD",     f"{w_mad.sum():.3f}")
+            c3.metric("Total HR — Minimax", f"{w_minimax.sum():.3f}")
+            c4.metric("MVHR β",             f"{live['mvhr_beta']:.3f}",
+                      help=f"Best single-FFA OLS hedge ratio using {live['mvhr_ffa']}")
+
+            # ── Bar chart ────────────────────────────────────────────────
+            st.markdown('<p class="section-header">Weight Comparison Across Models</p>', unsafe_allow_html=True)
+            fig_live = go.Figure()
+            colors = {"CVaR (LP)": "#2ecc71", "MAD (LP)": "#9b59b6", "Minimax (LP)": "#e67e22"}
+            for label, weights in [("CVaR (LP)", w_cvar), ("MAD (LP)", w_mad), ("Minimax (LP)", w_minimax)]:
+                fig_live.add_trace(go.Bar(
+                    name=label,
+                    x=ffa_cols_live,
+                    y=weights,
+                    marker_color=colors[label],
+                    text=[f"{w:.3f}" for w in weights],
+                    textposition="outside",
+                ))
+            fig_live.update_layout(
+                barmode="group",
+                height=420,
+                paper_bgcolor="#0e1117",
+                plot_bgcolor="#0e1117",
+                font=dict(color="#e0e0e0", family="Inter, sans-serif"),
+                yaxis_title="Hedge Weight",
+                xaxis_title="FFA Instrument",
+                legend=dict(bgcolor="rgba(30,30,30,0.85)"),
+                margin={"l": 50, "r": 30, "t": 40, "b": 50},
+            )
+            fig_live.add_hline(y=1.0, line_dash="dot", line_color="rgba(180,180,180,0.4)",
+                               annotation_text="1:1 reference", annotation_position="top right")
+            st.plotly_chart(fig_live, width='stretch')
+
+            st.download_button(
+                "⬇️  Download weights (CSV)",
+                df_weights.to_csv(index=False).encode("utf-8"),
+                file_name="live_hedge_weights.csv",
+                mime="text/csv",
+            )
+    else:
+        st.info("Click **⚡ Compute Live Hedge** to generate recommendations based on the latest available data.")
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# TAB 5 — METHODOLOGY
 # ═══════════════════════════════════════════════════════════════════════════
 with tab_methodology:
 
